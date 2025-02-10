@@ -7,7 +7,7 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (message) => {
     wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === ws.OPEN) {
+      if (client.readyState === ws.OPEN) {
         client.send(message.toString());
       }
     });
