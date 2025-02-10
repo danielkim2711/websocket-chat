@@ -8,6 +8,7 @@ import { NicknameModal } from './NicknameModal';
 interface ChatMessage {
   nickname: string;
   content: string;
+  timestamp: string;
 }
 
 export function Chat() {
@@ -29,6 +30,10 @@ export function Chat() {
       const messageData: ChatMessage = {
         nickname,
         content: inputMessage.trim(),
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
       };
 
       sendMessage(JSON.stringify(messageData));
@@ -53,19 +58,28 @@ export function Chat() {
       <NicknameModal isOpen={showModal} onSubmit={handleNicknameSubmit} />
       <div className='flex flex-col h-screen max-w-2xl mx-auto p-4'>
         <div className='flex-1 overflow-y-auto mb-4 space-y-2'>
-          {messages.map(({ nickname: messageNickname, content }, index) => (
-            <div
-              key={index}
-              className={`p-2 rounded ${
-                messageNickname === nickname
-                  ? 'bg-yellow-100 dark:bg-yellow-900'
-                  : 'bg-gray-100 dark:bg-gray-800'
-              }`}
-            >
-              <span className='font-bold'>{messageNickname}: </span>
-              {content}
-            </div>
-          ))}
+          {messages.map(
+            ({ nickname: messageNickname, content, timestamp }, index) => (
+              <div
+                key={index}
+                className={`p-2 rounded ${
+                  messageNickname === nickname
+                    ? 'bg-yellow-100 dark:bg-yellow-900'
+                    : 'bg-gray-100 dark:bg-gray-800'
+                }`}
+              >
+                <div className='flex justify-between items-start'>
+                  <div>
+                    <span className='font-bold'>{messageNickname}: </span>
+                    {content}
+                  </div>
+                  <span className='text-xs text-gray-500 ml-2'>
+                    {timestamp}
+                  </span>
+                </div>
+              </div>
+            )
+          )}
         </div>
         <div className='flex gap-2'>
           <input
