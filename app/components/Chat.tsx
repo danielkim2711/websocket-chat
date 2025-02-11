@@ -1,33 +1,50 @@
 'use client';
 
+// Components
+import { NicknameModal } from './NicknameModal';
+import { ChatMessage } from './ChatMessage';
+import { ParticipantsList } from './ParticipantsList';
+import { ChatInput } from './ChatInput';
+
+// Types
+import { ChatMessageType, Message } from '../types/ChatProps';
+
 // Hooks
 import { useState } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { NicknameModal } from './NicknameModal';
-
-interface ChatMessage {
-  nickname: string;
-  content: string;
-  timestamp: string;
-}
 
 export function Chat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [participants, setParticipants] = useState<string[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [nickname, setNickname] = useState<string>('');
   const [showModal, setShowModal] = useState(true);
 
   const { sendMessage } = useWebSocket({
     url: 'ws://localhost:3001',
+    nickname,
     onMessage: (event) => {
-      const messageData = JSON.parse(event.data) as ChatMessage;
+      const messageData = JSON.parse(event.data) as Message;
+
+      if (messageData.type === 'system') {
+        setParticipants((prev) => {
+          if (messageData.action === 'join') {
+            return [...prev, messageData.nickname];
+          } else if (messageData.action === 'leave') {
+            return prev.filter((name) => name !== messageData.nickname);
+          }
+          return prev;
+        });
+      }
+
       setMessages((prev) => [...prev, messageData]);
     },
+    enabled: Boolean(nickname),
   });
 
   const handleSend = () => {
     if (inputMessage.trim() && nickname) {
-      const messageData: ChatMessage = {
+      const messageData: ChatMessageType = {
         nickname,
         content: inputMessage.trim(),
         timestamp: new Date().toLocaleTimeString('en-US', {
@@ -42,12 +59,6 @@ export function Chat() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSend();
-    }
-  };
-
   const handleNicknameSubmit = (newNickname: string) => {
     setNickname(newNickname);
     setShowModal(false);
@@ -56,48 +67,27 @@ export function Chat() {
   return (
     <>
       <NicknameModal isOpen={showModal} onSubmit={handleNicknameSubmit} />
-      <div className='flex flex-col h-screen max-w-2xl mx-auto p-4'>
-        <div className='flex-1 overflow-y-auto mb-4 space-y-2'>
-          {messages.map(
-            ({ nickname: messageNickname, content, timestamp }, index) => (
-              <div
-                key={index}
-                className={`p-2 rounded ${
-                  messageNickname === nickname
-                    ? 'bg-yellow-100 dark:bg-yellow-900'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                }`}
-              >
-                <div className='flex justify-between items-start'>
-                  <div>
-                    <span className='font-bold'>{messageNickname}: </span>
-                    {content}
-                  </div>
-                  <span className='text-xs text-gray-500 ml-2'>
-                    {timestamp}
-                  </span>
-                </div>
-              </div>
-            )
-          )}
+      {nickname && (
+        <div className='flex h-screen max-w-6xl mx-auto p-4 gap-4'>
+          <div className='flex flex-col flex-1'>
+            <div className='flex-1 overflow-y-auto mb-4 space-y-2'>
+              {messages.map((message, index) => (
+                <ChatMessage
+                  key={index}
+                  message={message}
+                  currentUserNickname={nickname}
+                />
+              ))}
+            </div>
+            <ChatInput
+              value={inputMessage}
+              onChange={setInputMessage}
+              onSend={handleSend}
+            />
+          </div>
+          <ParticipantsList participants={participants} />
         </div>
-        <div className='flex gap-2'>
-          <input
-            type='text'
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className='flex-1 p-2 border rounded dark:bg-gray-800'
-            placeholder='Enter your message...'
-          />
-          <button
-            onClick={handleSend}
-            className='px-4 py-2 bg-blue-500 text-white rounded'
-          >
-            Send
-          </button>
-        </div>
-      </div>
+      )}
     </>
   );
 }
