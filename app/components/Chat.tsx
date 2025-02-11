@@ -54,7 +54,6 @@ export function Chat() {
       };
 
       sendMessage(JSON.stringify(messageData));
-      setMessages((prev) => [...prev, messageData]);
       setInputMessage('');
     }
   };
